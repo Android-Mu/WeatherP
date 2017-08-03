@@ -1,0 +1,9 @@
+<litepal>
+    <dbname value="weather_p"></dbname>
+
+    <version value="1"></version>
+
+    <List>
+        <mapping class="com.codexiaosheng.weatherp.db.Province"></mapping>
+    </List>
+</litepal>
