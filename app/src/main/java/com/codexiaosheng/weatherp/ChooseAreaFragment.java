@@ -15,9 +15,11 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.codexiaosheng.weatherp.constant.Constant;
 import com.codexiaosheng.weatherp.db.City;
 import com.codexiaosheng.weatherp.db.County;
 import com.codexiaosheng.weatherp.db.Province;
+import com.codexiaosheng.weatherp.http.HttpModule;
 import com.codexiaosheng.weatherp.util.HttpUtil;
 import com.codexiaosheng.weatherp.util.Utility;
 
@@ -95,9 +97,9 @@ public class ChooseAreaFragment extends Fragment {
             @Override
             public void onClick(View v) {
                 if (currentLevel == LEVEL_CITY) {
-                    queryCities();
-                } else if (currentLevel == LEVEL_COUNTY) {
                     queryProvinces();
+                } else if (currentLevel == LEVEL_COUNTY) {
+                    queryCities();
                 }
             }
         });
@@ -112,7 +114,9 @@ public class ChooseAreaFragment extends Fragment {
         tvTitle.setText("中国");
         btnBack.setVisibility(View.GONE);
         provinceList = DataSupport.findAll(Province.class);
+        Log.e("queryProvinces-->>>", "queryProvinces: " + provinceList.size());
         if (provinceList.size() > 0) {
+            datas.clear();
             for (Province province : provinceList) {
                 datas.add(province.getProvinceName());
             }
@@ -120,7 +124,7 @@ public class ChooseAreaFragment extends Fragment {
             lvView.setSelection(0);
             currentLevel = LEVEL_PROVINCE;
         } else {
-            String url = "";
+            String url = HttpModule.BASE_URL + "province?appkey=" + Constant.APP_KEY;
             queryFromServer(url, "province");
         }
     }
@@ -131,8 +135,9 @@ public class ChooseAreaFragment extends Fragment {
     private void queryCities() {
         tvTitle.setText(selectProvince.getProvinceName());
         btnBack.setVisibility(View.VISIBLE);
-        cityList = DataSupport.where("provinceid = ?",
+        cityList = DataSupport.where("provinceId = ?",
                 String.valueOf(selectProvince.getId())).find(City.class);
+        Log.e("queryCities--->>", "queryCities: " + cityList.size());
         if (cityList.size() > 0) {
             datas.clear();
             for (City city : cityList) {
@@ -142,8 +147,8 @@ public class ChooseAreaFragment extends Fragment {
             lvView.setSelection(0);
             currentLevel = LEVEL_CITY;
         } else {
-            int provinceCode = selectProvince.getProvinceCode();
-            String url = "";
+            int provinceCode = selectProvince.getId();
+            String url = HttpModule.BASE_URL + "city?parentid=" + provinceCode + "&appkey=" + Constant.APP_KEY;
             queryFromServer(url, "city");
         }
     }
@@ -154,8 +159,9 @@ public class ChooseAreaFragment extends Fragment {
     private void queryCounties() {
         tvTitle.setText(selectCity.getCityName());
         btnBack.setVisibility(View.VISIBLE);
-        countyList = DataSupport.where("cityid = ?",
+        countyList = DataSupport.where("cityId = ?",
                 String.valueOf(selectCity.getId())).find(County.class);
+        Log.e("queryCounties--->>", "queryCounties: " + countyList.size());
         if (countyList.size() > 0) {
             datas.clear();
             for (County county : countyList) {
@@ -165,9 +171,9 @@ public class ChooseAreaFragment extends Fragment {
             lvView.setSelection(0);
             currentLevel = LEVEL_COUNTY;
         } else {
-            int provinceCode = selectProvince.getProvinceCode();
-            int cityCode = selectCity.getCityCode();
-            String url = "";
+//            int provinceCode = selectProvince.getProvinceCode();
+            int cityCode = selectCity.getId();
+            String url = HttpModule.BASE_URL + "town?parentid=" + cityCode + "&appkey=" + Constant.APP_KEY;
             queryFromServer(url, "county");
         }
     }

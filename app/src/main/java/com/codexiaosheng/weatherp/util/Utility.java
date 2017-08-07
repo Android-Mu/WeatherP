@@ -2,13 +2,14 @@ package com.codexiaosheng.weatherp.util;
 
 import android.text.TextUtils;
 
+import com.codexiaosheng.weatherp.bean.CountyBean;
+import com.codexiaosheng.weatherp.bean.ProvinceBean;
 import com.codexiaosheng.weatherp.db.City;
 import com.codexiaosheng.weatherp.db.County;
 import com.codexiaosheng.weatherp.db.Province;
+import com.google.gson.Gson;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
+import java.util.List;
 
 /**
  * Description：json解析工具类
@@ -26,18 +27,17 @@ public class Utility {
      */
     public static boolean handleProvinceJson(String response) {
         if (!TextUtils.isEmpty(response)) {
-            try {
-                JSONArray allProvince = new JSONArray(response);
-                for (int i = 0; i < allProvince.length(); i++) {
-                    JSONObject provinceObject = allProvince.getJSONObject(i);
+            Gson gson = new Gson();
+            ProvinceBean provinceBean = gson.fromJson(response, ProvinceBean.class);
+            List<ProvinceBean.ResultBean> pList = provinceBean.getResult();
+            if (null != pList && pList.size() > 0) {
+                for (int i = 0; i < pList.size(); i++) {
                     Province province = new Province();
-                    province.setProvinceCode(provinceObject.getInt("id"));
-                    province.setProvinceName(provinceObject.getString("name"));
+                    province.setProvinceCode(pList.get(i).getParentid());
+                    province.setProvinceName(pList.get(i).getName());
                     province.save();
                 }
                 return true;
-            } catch (JSONException e) {
-                e.printStackTrace();
             }
         }
         return false;
@@ -52,19 +52,17 @@ public class Utility {
      */
     public static boolean handleCityJson(String response, int provinceId) {
         if (!TextUtils.isEmpty(response)) {
-            try {
-                JSONArray allCities = new JSONArray(response);
-                for (int i = 0; i < allCities.length(); i++) {
-                    JSONObject cityObject = allCities.getJSONObject(i);
+            Gson gson = new Gson();
+            ProvinceBean provinceBean = gson.fromJson(response, ProvinceBean.class);
+            List<ProvinceBean.ResultBean> pList = provinceBean.getResult();
+            if (null != pList && pList.size() > 0) {
+                for (int i = 0; i < pList.size(); i++) {
                     City city = new City();
-                    city.setCityCode(cityObject.getInt("id"));
-                    city.setCityName(cityObject.getString("name"));
-                    city.setProvinceId(provinceId);
+                    city.setProvinceId(pList.get(i).getParentid());
+                    city.setCityName(pList.get(i).getName());
                     city.save();
                 }
                 return true;
-            } catch (JSONException e) {
-                e.printStackTrace();
             }
         }
         return false;
@@ -79,19 +77,18 @@ public class Utility {
      */
     public static boolean handleCountyJson(String response, int cityId) {
         if (!TextUtils.isEmpty(response)) {
-            try {
-                JSONArray allCounties = new JSONArray(response);
-                for (int i = 0; i < allCounties.length(); i++) {
-                    JSONObject countyObject = allCounties.getJSONObject(i);
+            Gson gson = new Gson();
+            CountyBean provinceBean = gson.fromJson(response, CountyBean.class);
+            List<CountyBean.ResultBean> pList = provinceBean.getResult();
+            if (null != pList && pList.size() > 0) {
+                for (int i = 0; i < pList.size(); i++) {
                     County county = new County();
-                    county.setCountyName(countyObject.getString("name"));
-                    county.setWeatherId(countyObject.getString("weather_id"));
-                    county.setCityId(cityId);
+//                    county.setId(pList.get(i).getParentid());
+                    county.setCityId(pList.get(i).getParentid());
+                    county.setCountyName(pList.get(i).getName());
                     county.save();
                 }
                 return true;
-            } catch (JSONException e) {
-                e.printStackTrace();
             }
         }
         return false;

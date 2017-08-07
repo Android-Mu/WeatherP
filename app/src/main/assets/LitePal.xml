@@ -5,5 +5,7 @@
 
     <List>
         <mapping class="com.codexiaosheng.weatherp.db.Province"></mapping>
+        <mapping class="com.codexiaosheng.weatherp.db.City"></mapping>
+        <mapping class="com.codexiaosheng.weatherp.db.County"></mapping>
     </List>
 </litepal>

@@ -14,7 +14,7 @@ public class HttpUtil {
 
     public static void sendHttpRequest(String url, Callback call) {
         OkHttpClient httpClient = new OkHttpClient();
-        Request request = new Request.Builder().url(url).build();
+        Request request = new Request.Builder().url(url).get().build();
         httpClient.newCall(request).enqueue(call);
     }
 
