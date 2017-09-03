@@ -12,6 +12,7 @@ public class CityBean extends DataSupport{
 
     private String pinYin;
     private Integer id;
+    private Integer provinceid; // 上级省份的id
     private double gisGcj02Lng;
     private double gisBd09Lng;
     private String name;
@@ -32,6 +33,14 @@ public class CityBean extends DataSupport{
 
     public void setId(Integer id) {
         this.id = id;
+    }
+
+    public Integer getProvinceid() {
+        return provinceid;
+    }
+
+    public void setProvinceid(Integer provinceid) {
+        this.provinceid = provinceid;
     }
 
     public double getGisGcj02Lng() {

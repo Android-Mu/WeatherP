@@ -52,8 +52,11 @@ public class ChooseAreaFragment extends Fragment {
 
     // 当前选中的级别
     private int currentLevel;
+    private ProvinceBean selectProvince; // 选中的省份
+    private CityBean selectCity; // 选中的市
 
     private ProgressDialog progressDialog;
+
     // 省市县集合
     private List<ProvinceCityCountyBean> pccList = new ArrayList<>();
     private List<ProvinceBean> provinceList = new ArrayList<>();
@@ -81,11 +84,12 @@ public class ChooseAreaFragment extends Fragment {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 if (currentLevel == LEVEL_PROVINCE) {
-//                    selectProvince = provinceList.get(position);
-//                    queryCities();
+                    selectProvince = provinceList.get(position);
+                    Log.e("selectProvince.getId()", "-->" + provinceList.get(position).getId());
+                    queryCities();
                 } else if (currentLevel == LEVEL_CITY) {
-//                    selectCity = cityList.get(position);
-//                    queryCounties();
+                    selectCity = cityList.get(position);
+                    queryCounties();
                 }
             }
         });
@@ -96,12 +100,59 @@ public class ChooseAreaFragment extends Fragment {
                 if (currentLevel == LEVEL_CITY) {
                     queryDatas();
                 } else if (currentLevel == LEVEL_COUNTY) {
-//                    queryCities();
+                    queryCities();
                 }
             }
         });
 
         queryDatas();
+    }
+
+    /**
+     * 查询区/县级别数据
+     */
+    private void queryCounties() {
+        tvTitle.setText(selectCity.getName());
+        btnBack.setVisibility(View.VISIBLE);
+        showProgressDialog();
+        countyList = DataSupport.findAll(CountyBean.class);
+        if (countyList.size() > 0) {
+            datas.clear();
+            for (CountyBean county :
+                    countyList) {
+                datas.add(county.getName());
+            }
+            closeProgressDialog();
+            adapter.notifyDataSetChanged();
+            lvView.setSelection(0);
+            currentLevel = Constant.LEVEL_COUNTY;
+        } else {
+
+        }
+    }
+
+    /**
+     * 查询市级别数据
+     */
+    private void queryCities() {
+        tvTitle.setText(selectProvince.getName());
+        btnBack.setVisibility(View.VISIBLE);
+        showProgressDialog(); // 999078
+        cityList = DataSupport.where("provinceid = ?", String.valueOf(selectProvince.getId())).find(CityBean.class);
+//        cityList = DataSupport.where("provinceid = 999078").find(CityBean.class);
+        Log.e("cityList.size()", "queryCities: " + cityList.size() + "-->" + selectProvince.getId());
+        if (cityList.size() > 0) {
+            datas.clear();
+            for (CityBean city : cityList) {
+                datas.add(city.getName());
+            }
+            closeProgressDialog();
+            adapter.notifyDataSetChanged();
+            lvView.setSelection(0);
+            currentLevel = Constant.LEVEL_CITY;
+        } else {
+
+        }
     }
 
     /**
@@ -111,11 +162,10 @@ public class ChooseAreaFragment extends Fragment {
         tvTitle.setText("中国");
         btnBack.setVisibility(View.GONE);
         showProgressDialog();
-        List<ProvinceBean> pList = DataSupport.findAll(ProvinceBean.class);
-        Log.e("provinceList.size()->", "queryDatas: " + pList.size());
-        if (pList.size() > 0) {
+        provinceList = DataSupport.findAll(ProvinceBean.class);
+        if (provinceList.size() > 0) {
             datas.clear();
-            for (ProvinceBean province : pList) {
+            for (ProvinceBean province : provinceList) {
                 datas.add(province.getName());
             }
             closeProgressDialog();
@@ -149,7 +199,7 @@ public class ChooseAreaFragment extends Fragment {
     };
 
     /**
-     * 从服务器获取对应数据
+     * 从本地解析json保存数据
      */
     private void queryFromServer() {
         new Thread(new Runnable() {
@@ -176,6 +226,7 @@ public class ChooseAreaFragment extends Fragment {
                             province.save();
 
                             if (i == pccList.size() - 1) {
+                                Log.e("-provinceid->", "run: " + bean.getId());
                                 handler.sendEmptyMessage(10);
                             }
 
@@ -185,6 +236,7 @@ public class ChooseAreaFragment extends Fragment {
                                 CityBean city = new CityBean();
                                 city.setName(cBean.getName());
                                 city.setId(Integer.parseInt(cBean.getId()));
+                                city.setProvinceid(Integer.parseInt(bean.getId()));
                                 city.save();
                                 cityList.add(city);
                                 if (i == pccList.size() - 1 && j == cList.size() - 1) {
