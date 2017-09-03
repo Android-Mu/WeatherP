@@ -8,6 +8,8 @@ package com.codexiaosheng.weatherp.constant;
 
 public class Constant {
 
-    public static final String APP_KEY = "81885ee92e75ce5c";
+    public static final int LEVEL_PROVINCE = 0;
+    public static final int LEVEL_CITY = 1;
+    public static final int LEVEL_COUNTY = 2;
 
 }

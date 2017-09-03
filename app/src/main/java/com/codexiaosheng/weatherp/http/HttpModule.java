@@ -8,6 +8,4 @@ package com.codexiaosheng.weatherp.http;
 
 public class HttpModule {
 
-    public static final String BASE_URL = "http://api.jisuapi.com/area/";
-
 }

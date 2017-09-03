@@ -2,8 +2,11 @@ package com.codexiaosheng.weatherp;
 
 import android.app.ProgressDialog;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -13,28 +16,27 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
-import android.widget.Toast;
 
+import com.codexiaosheng.weatherp.bean.ProvinceCityCountyBean;
 import com.codexiaosheng.weatherp.constant.Constant;
-import com.codexiaosheng.weatherp.db.City;
-import com.codexiaosheng.weatherp.db.County;
-import com.codexiaosheng.weatherp.db.Province;
-import com.codexiaosheng.weatherp.http.HttpModule;
-import com.codexiaosheng.weatherp.util.HttpUtil;
-import com.codexiaosheng.weatherp.util.Utility;
+import com.codexiaosheng.weatherp.db.CityBean;
+import com.codexiaosheng.weatherp.db.CountyBean;
+import com.codexiaosheng.weatherp.db.ProvinceBean;
+import com.codexiaosheng.weatherp.util.Util;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 import org.litepal.crud.DataSupport;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.Response;
+import static com.codexiaosheng.weatherp.constant.Constant.LEVEL_CITY;
+import static com.codexiaosheng.weatherp.constant.Constant.LEVEL_COUNTY;
+import static com.codexiaosheng.weatherp.constant.Constant.LEVEL_PROVINCE;
 
 /**
- * Description：选择省市区
+ * Description：展示省市区
  * <p>
  * Created by code-xiaosheng on 2017/8/2.
  */
@@ -48,20 +50,15 @@ public class ChooseAreaFragment extends Fragment {
     private ArrayAdapter<String> adapter;
     private List<String> datas = new ArrayList<>();
 
-    public static final int LEVEL_PROVINCE = 0;
-    public static final int LEVEL_CITY = 1;
-    public static final int LEVEL_COUNTY = 2;
     // 当前选中的级别
     private int currentLevel;
 
     private ProgressDialog progressDialog;
     // 省市县集合
-    private List<Province> provinceList;
-    private List<City> cityList;
-    private List<County> countyList;
-    // 选中的省、市
-    private Province selectProvince;
-    private City selectCity;
+    private List<ProvinceCityCountyBean> pccList = new ArrayList<>();
+    private List<ProvinceBean> provinceList = new ArrayList<>();
+    private List<CityBean> cityList = new ArrayList<>();
+    private List<CountyBean> countyList = new ArrayList<>();
 
     @Nullable
     @Override
@@ -84,11 +81,11 @@ public class ChooseAreaFragment extends Fragment {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 if (currentLevel == LEVEL_PROVINCE) {
-                    selectProvince = provinceList.get(position);
-                    queryCities();
+//                    selectProvince = provinceList.get(position);
+//                    queryCities();
                 } else if (currentLevel == LEVEL_CITY) {
-                    selectCity = cityList.get(position);
-                    queryCounties();
+//                    selectCity = cityList.get(position);
+//                    queryCounties();
                 }
             }
         });
@@ -97,138 +94,123 @@ public class ChooseAreaFragment extends Fragment {
             @Override
             public void onClick(View v) {
                 if (currentLevel == LEVEL_CITY) {
-                    queryProvinces();
+                    queryDatas();
                 } else if (currentLevel == LEVEL_COUNTY) {
-                    queryCities();
+//                    queryCities();
                 }
             }
         });
 
-        queryProvinces();
+        queryDatas();
     }
 
     /**
      * 查询所有省级数据，顺序，先查数据库，再从服务器获取
      */
-    private void queryProvinces() {
+    private void queryDatas() {
         tvTitle.setText("中国");
         btnBack.setVisibility(View.GONE);
-        provinceList = DataSupport.findAll(Province.class);
-        Log.e("queryProvinces-->>>", "queryProvinces: " + provinceList.size());
-        if (provinceList.size() > 0) {
+        showProgressDialog();
+        List<ProvinceBean> pList = DataSupport.findAll(ProvinceBean.class);
+        Log.e("provinceList.size()->", "queryDatas: " + pList.size());
+        if (pList.size() > 0) {
             datas.clear();
-            for (Province province : provinceList) {
-                datas.add(province.getProvinceName());
+            for (ProvinceBean province : pList) {
+                datas.add(province.getName());
             }
+            closeProgressDialog();
             adapter.notifyDataSetChanged();
             lvView.setSelection(0);
-            currentLevel = LEVEL_PROVINCE;
+            currentLevel = Constant.LEVEL_PROVINCE;
         } else {
-            String url = HttpModule.BASE_URL + "province?appkey=" + Constant.APP_KEY;
-            queryFromServer(url, "province");
+            queryFromServer();
         }
     }
 
-    /**
-     * 查询城市数据
-     */
-    private void queryCities() {
-        tvTitle.setText(selectProvince.getProvinceName());
-        btnBack.setVisibility(View.VISIBLE);
-        cityList = DataSupport.where("provinceId = ?",
-                String.valueOf(selectProvince.getId())).find(City.class);
-        Log.e("queryCities--->>", "queryCities: " + cityList.size());
-        if (cityList.size() > 0) {
-            datas.clear();
-            for (City city : cityList) {
-                datas.add(city.getCityName());
+    private Handler handler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            super.handleMessage(msg);
+            closeProgressDialog();
+            int type = msg.what;
+            switch (type) {
+                case 10:
+                    Log.e("ChooseAreaFragment", "handleMessage: Province->" + provinceList.size());
+                    queryDatas();
+                    break;
+                case 20:
+                    Log.e("ChooseAreaFragment", "handleMessage: City->" + cityList.size());
+                    break;
+                case 30:
+                    Log.e("ChooseAreaFragment", "handleMessage: County->" + countyList.size());
+                    break;
             }
-            adapter.notifyDataSetChanged();
-            lvView.setSelection(0);
-            currentLevel = LEVEL_CITY;
-        } else {
-            int provinceCode = selectProvince.getId();
-            String url = HttpModule.BASE_URL + "city?parentid=" + provinceCode + "&appkey=" + Constant.APP_KEY;
-            queryFromServer(url, "city");
         }
-    }
-
-    /**
-     * 查询县/区数据
-     */
-    private void queryCounties() {
-        tvTitle.setText(selectCity.getCityName());
-        btnBack.setVisibility(View.VISIBLE);
-        countyList = DataSupport.where("cityId = ?",
-                String.valueOf(selectCity.getId())).find(County.class);
-        Log.e("queryCounties--->>", "queryCounties: " + countyList.size());
-        if (countyList.size() > 0) {
-            datas.clear();
-            for (County county : countyList) {
-                datas.add(county.getCountyName());
-            }
-            adapter.notifyDataSetChanged();
-            lvView.setSelection(0);
-            currentLevel = LEVEL_COUNTY;
-        } else {
-//            int provinceCode = selectProvince.getProvinceCode();
-            int cityCode = selectCity.getId();
-            String url = HttpModule.BASE_URL + "town?parentid=" + cityCode + "&appkey=" + Constant.APP_KEY;
-            queryFromServer(url, "county");
-        }
-    }
+    };
 
     /**
      * 从服务器获取对应数据
-     *
-     * @param url
-     * @param type
      */
-    private void queryFromServer(String url, final String type) {
-        showProgressDialog();
-        HttpUtil.sendHttpRequest(url, new Callback() {
+    private void queryFromServer() {
+        new Thread(new Runnable() {
             @Override
-            public void onFailure(Call call, IOException e) {
-                Log.e("ChooseAreaFragment", "onFailure: " + e.getMessage());
-                getActivity().runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        closeProgressDialog();
-                        Toast.makeText(getActivity(), "加载失败", Toast.LENGTH_LONG).show();
-                    }
-                });
-            }
+            public void run() {
+                String json = Util.getDataFromAssets(getActivity());
+                if (!TextUtils.isEmpty(json)) {
+                    Gson gson = new Gson();
+                    pccList = gson.fromJson(json, new TypeToken<List<ProvinceCityCountyBean>>() {
+                    }.getType());
 
-            @Override
-            public void onResponse(Call call, Response response) throws IOException {
-                String responseText = response.body().string();
-                Log.e("ChooseAreaFragment", "onResponse: " + responseText);
-                boolean result = false;
-                if ("province".equals(type)) {
-                    result = Utility.handleProvinceJson(responseText);
-                } else if ("city".equals(type)) {
-                    result = Utility.handleCityJson(responseText, selectProvince.getId());
-                } else if ("county".equals(type)) {
-                    result = Utility.handleCountyJson(responseText, selectCity.getId());
-                }
+                    if (pccList.size() > 0) {
+                        for (int i = 0; i < pccList.size(); i++) {
+                            ProvinceCityCountyBean bean = pccList.get(i);
+                            ProvinceBean province = new ProvinceBean();
+                            province.setName(bean.getName());
+                            province.setId(Integer.parseInt(bean.getId()));
+                            province.setPinYin(bean.getPinYin());
+                            province.setGisBd09Lat(bean.getGisBd09Lat());
+                            province.setGisBd09Lng(bean.getGisBd09Lng());
+                            province.setGisGcj02Lat(bean.getGisGcj02Lat());
+                            province.setGisGcj02Lng(bean.getGisGcj02Lng());
+                            provinceList.add(province);
+                            province.save();
 
-                if (result) {
-                    getActivity().runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            closeProgressDialog();
-                            if ("province".equals(type)) {
-                                queryProvinces();
-                            } else if ("city".equals(type)) {
-                                queryCities();
-                            } else if ("county".equals(type)) {
-                                queryCounties();
+                            if (i == pccList.size() - 1) {
+                                handler.sendEmptyMessage(10);
+                            }
+
+                            List<ProvinceCityCountyBean.CityListBeanX> cList = bean.getCityList();
+                            for (int j = 0; j < cList.size(); j++) {
+                                ProvinceCityCountyBean.CityListBeanX cBean = cList.get(j);
+                                CityBean city = new CityBean();
+                                city.setName(cBean.getName());
+                                city.setId(Integer.parseInt(cBean.getId()));
+                                city.save();
+                                cityList.add(city);
+                                if (i == pccList.size() - 1 && j == cList.size() - 1) {
+                                    handler.sendEmptyMessage(20);
+                                }
+
+                                List<ProvinceCityCountyBean.CityListBeanX.CityListBean> countyL =
+                                        cBean.getCityList();
+                                for (int k = 0; k < countyL.size(); k++) {
+                                    ProvinceCityCountyBean.CityListBeanX.CityListBean countB =
+                                            countyL.get(k);
+                                    CountyBean county = new CountyBean();
+                                    county.setId(Integer.parseInt(countB.getId()));
+                                    county.setName(countB.getName());
+                                    county.save();
+                                    countyList.add(county);
+                                    if (i == pccList.size() - 1 && j == cList.size() - 1 && k == countyL.size() - 1) {
+                                        handler.sendEmptyMessage(30);
+                                    }
+                                }
                             }
                         }
-                    });
+                    }
                 }
             }
-        });
+        }).start();
     }
 
     /**
@@ -237,7 +219,7 @@ public class ChooseAreaFragment extends Fragment {
     private void showProgressDialog() {
         if (progressDialog == null) {
             progressDialog = new ProgressDialog(getActivity());
-            progressDialog.setMessage("正在加载...");
+            progressDialog.setMessage("正在加载中...");
             progressDialog.setCanceledOnTouchOutside(false);
         }
         progressDialog.show();

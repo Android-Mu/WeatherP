@@ -1,11 +1,11 @@
 <litepal>
-    <dbname value="weather_p"></dbname>
+    <dbname value="weather_p"/>
 
-    <version value="1"></version>
+    <version value="1"/>
 
     <List>
-        <mapping class="com.codexiaosheng.weatherp.db.Province"></mapping>
-        <mapping class="com.codexiaosheng.weatherp.db.City"></mapping>
-        <mapping class="com.codexiaosheng.weatherp.db.County"></mapping>
+        <mapping class="com.codexiaosheng.weatherp.db.ProvinceBean"/>
+        <mapping class="com.codexiaosheng.weatherp.db.CityBean"/>
+        <mapping class="com.codexiaosheng.weatherp.db.CountyBean"/>
     </List>
 </litepal>
