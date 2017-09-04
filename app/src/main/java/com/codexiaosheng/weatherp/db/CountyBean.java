@@ -11,6 +11,8 @@ import org.litepal.crud.DataSupport;
 public class CountyBean extends DataSupport {
 
     private Integer id;
+    private Integer countyid;
+    private Integer cid;
     private String name;
     private int status;
     private Object orderId;
@@ -24,6 +26,22 @@ public class CountyBean extends DataSupport {
     private double gisGcj02Lng;
     private int stubGroupCnt;
     private String pinYin;
+
+    public Integer getCountyid() {
+        return countyid;
+    }
+
+    public void setCountyid(Integer countyid) {
+        this.countyid = countyid;
+    }
+
+    public Integer getCid() {
+        return cid;
+    }
+
+    public void setCid(Integer cid) {
+        this.cid = cid;
+    }
 
     public Integer getId() {
         return id;

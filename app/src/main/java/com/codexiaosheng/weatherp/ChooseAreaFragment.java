@@ -85,7 +85,6 @@ public class ChooseAreaFragment extends Fragment {
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 if (currentLevel == LEVEL_PROVINCE) {
                     selectProvince = provinceList.get(position);
-                    Log.e("selectProvince.getId()", "-->" + provinceList.get(position).getId());
                     queryCities();
                 } else if (currentLevel == LEVEL_CITY) {
                     selectCity = cityList.get(position);
@@ -115,7 +114,8 @@ public class ChooseAreaFragment extends Fragment {
         tvTitle.setText(selectCity.getName());
         btnBack.setVisibility(View.VISIBLE);
         showProgressDialog();
-        countyList = DataSupport.findAll(CountyBean.class);
+        countyList = DataSupport.where("cid = ?",
+                String.valueOf(selectCity.getCid())).find(CountyBean.class);
         if (countyList.size() > 0) {
             datas.clear();
             for (CountyBean county :
@@ -124,10 +124,8 @@ public class ChooseAreaFragment extends Fragment {
             }
             closeProgressDialog();
             adapter.notifyDataSetChanged();
-            lvView.setSelection(0);
+//            lvView.setSelection(0);
             currentLevel = Constant.LEVEL_COUNTY;
-        } else {
-
         }
     }
 
@@ -137,10 +135,9 @@ public class ChooseAreaFragment extends Fragment {
     private void queryCities() {
         tvTitle.setText(selectProvince.getName());
         btnBack.setVisibility(View.VISIBLE);
-        showProgressDialog(); // 999078
-        cityList = DataSupport.where("provinceid = ?", String.valueOf(selectProvince.getId())).find(CityBean.class);
-//        cityList = DataSupport.where("provinceid = 999078").find(CityBean.class);
-        Log.e("cityList.size()", "queryCities: " + cityList.size() + "-->" + selectProvince.getId());
+        showProgressDialog();
+        cityList = DataSupport.where("provinceid = ?",
+                String.valueOf(selectProvince.getPid())).find(CityBean.class);
         if (cityList.size() > 0) {
             datas.clear();
             for (CityBean city : cityList) {
@@ -150,8 +147,6 @@ public class ChooseAreaFragment extends Fragment {
             adapter.notifyDataSetChanged();
             lvView.setSelection(0);
             currentLevel = Constant.LEVEL_CITY;
-        } else {
-
         }
     }
 
@@ -217,16 +212,11 @@ public class ChooseAreaFragment extends Fragment {
                             ProvinceBean province = new ProvinceBean();
                             province.setName(bean.getName());
                             province.setId(Integer.parseInt(bean.getId()));
-                            province.setPinYin(bean.getPinYin());
-                            province.setGisBd09Lat(bean.getGisBd09Lat());
-                            province.setGisBd09Lng(bean.getGisBd09Lng());
-                            province.setGisGcj02Lat(bean.getGisGcj02Lat());
-                            province.setGisGcj02Lng(bean.getGisGcj02Lng());
+                            province.setPid(Integer.parseInt(bean.getId()));
                             provinceList.add(province);
                             province.save();
 
                             if (i == pccList.size() - 1) {
-                                Log.e("-provinceid->", "run: " + bean.getId());
                                 handler.sendEmptyMessage(10);
                             }
 
@@ -237,10 +227,12 @@ public class ChooseAreaFragment extends Fragment {
                                 city.setName(cBean.getName());
                                 city.setId(Integer.parseInt(cBean.getId()));
                                 city.setProvinceid(Integer.parseInt(bean.getId()));
+                                city.setCid(Integer.parseInt(cBean.getId()));
                                 city.save();
                                 cityList.add(city);
                                 if (i == pccList.size() - 1 && j == cList.size() - 1) {
                                     handler.sendEmptyMessage(20);
+                                    Log.e("city id", "run: " + cBean.getId() + "--" + city.getId());
                                 }
 
                                 List<ProvinceCityCountyBean.CityListBeanX.CityListBean> countyL =
@@ -250,7 +242,9 @@ public class ChooseAreaFragment extends Fragment {
                                             countyL.get(k);
                                     CountyBean county = new CountyBean();
                                     county.setId(Integer.parseInt(countB.getId()));
+                                    county.setCountyid(Integer.parseInt(countB.getId()));
                                     county.setName(countB.getName());
+                                    county.setCid(Integer.parseInt(cBean.getId()));
                                     county.save();
                                     countyList.add(county);
                                     if (i == pccList.size() - 1 && j == cList.size() - 1 && k == countyL.size() - 1) {

@@ -12,11 +12,20 @@ public class ProvinceBean extends DataSupport {
 
     private String pinYin;
     private Integer id;
+    private Integer pid;
     private double gisGcj02Lng;
     private double gisBd09Lng;
     private String name;
     private double gisBd09Lat;
     private double gisGcj02Lat;
+
+    public Integer getPid() {
+        return pid;
+    }
+
+    public void setPid(Integer pid) {
+        this.pid = pid;
+    }
 
     public String getPinYin() {
         return pinYin;
