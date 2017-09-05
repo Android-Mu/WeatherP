@@ -1,6 +1,7 @@
 package com.codexiaosheng.weatherp;
 
 import android.app.ProgressDialog;
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -89,6 +90,10 @@ public class ChooseAreaFragment extends Fragment {
                 } else if (currentLevel == LEVEL_CITY) {
                     selectCity = cityList.get(position);
                     queryCounties();
+                } else if (currentLevel == LEVEL_COUNTY) {
+                    Intent intent = new Intent(getActivity(), WeatherActivity.class);
+                    intent.putExtra("city_name", countyList.get(position).getName());
+                    startActivity(intent);
                 }
             }
         });
