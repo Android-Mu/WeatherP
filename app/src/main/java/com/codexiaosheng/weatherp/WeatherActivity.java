@@ -1,6 +1,8 @@
 package com.codexiaosheng.weatherp;
 
 import android.content.SharedPreferences;
+import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
@@ -8,11 +10,14 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.bumptech.glide.Glide;
+import com.codexiaosheng.weatherp.bean.BingPicBean;
 import com.codexiaosheng.weatherp.bean.WeatherBean;
 import com.codexiaosheng.weatherp.constant.Constant;
 import com.codexiaosheng.weatherp.http.HttpModule;
@@ -32,6 +37,7 @@ import java.util.List;
 
 public class WeatherActivity extends AppCompatActivity {
 
+    private ImageView ivBg;
     private ScrollView svWeatherLayout;
     private TextView tvCityName;
     private TextView tvUpdateTime;
@@ -46,23 +52,39 @@ public class WeatherActivity extends AppCompatActivity {
 
     private List<WeatherBean.HeWeather5Bean> weatherList = new ArrayList<>();
     private WeatherBean.HeWeather5Bean weather5Bean;
-    private List<WeatherBean.HeWeather5Bean.NowBean> nowList = new ArrayList<>();
-    private List<WeatherBean.HeWeather5Bean.SuggestionBean> suggestionList = new ArrayList<>();
-    private List<WeatherBean.HeWeather5Bean.DailyForecastBean> dailyForecastList = new ArrayList<>();
-//    private List<WeatherBean.HeWeather5Bean> dailyForecastList = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_weather);
+        // 融合状态栏
+        if (Build.VERSION.SDK_INT >= 21) {
+            View decorView = getWindow().getDecorView();
+            decorView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
+                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
+            getWindow().setStatusBarColor(Color.TRANSPARENT);
+        }
 
         initView();
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        String bingPic = prefs.getString("bing_pic", null);
+        if (bingPic != null) {
+            Glide.with(this).load(bingPic).into(ivBg);
+        } else {
+            loadBingImg();
+        }
+
         String weatherStr = prefs.getString("weather", null);
         if (weatherStr != null) {
             // 有缓存时直接解析天气数据
-
+            Gson gson = new Gson();
+            WeatherBean weatherBean = gson.fromJson(weatherStr, WeatherBean.class);
+            weatherList = weatherBean.getHeWeather5();
+            if (weatherList.size() > 0) {
+                weather5Bean = weatherList.get(0);
+                showWeatherInfo(weather5Bean);
+            }
         } else {
             // 无缓存时去服务器请求数据
             String cityName = getIntent().getStringExtra("city_name");
@@ -73,7 +95,45 @@ public class WeatherActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * 加载背景图片
+     */
+    private void loadBingImg() {
+        final String bingPic = "http://cn.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1";
+        OkGo.<String>get(bingPic).execute(new StringCallback() {
+            @Override
+            public void onSuccess(Response<String> response) {
+                String json = response.body().toString();
+                if (!TextUtils.isEmpty(json)) {
+                    Gson gson = new Gson();
+                    BingPicBean picBean = gson.fromJson(json, BingPicBean.class);
+                    if (null != picBean) {
+                        List<BingPicBean.ImagesBean> list = picBean.getImages();
+                        if (list != null && list.size() > 0) {
+                            String url = list.get(0).getUrl();
+                            if (!TextUtils.isEmpty(url)) {
+                                SharedPreferences.Editor editor = PreferenceManager
+                                        .getDefaultSharedPreferences(WeatherActivity.this).edit();
+                                editor.putString("bing_pic", "http://s.cn.bing.net" + url);
+                                editor.apply();
+                                Glide.with(WeatherActivity.this)
+                                        .load("http://s.cn.bing.net" + url)
+                                        .into(ivBg);
+                            }
+                        }
+                    }
+                }
+            }
+
+            @Override
+            public void onError(Response<String> response) {
+                super.onError(response);
+            }
+        });
+    }
+
     private void initView() {
+        ivBg = (ImageView) findViewById(R.id.iv_bg);
         svWeatherLayout = (ScrollView) findViewById(R.id.sv_weather_layout);
         tvCityName = (TextView) findViewById(R.id.tv_city_name);
         tvUpdateTime = (TextView) findViewById(R.id.tv_update_time);
@@ -127,6 +187,8 @@ public class WeatherActivity extends AppCompatActivity {
                         Toast.LENGTH_LONG).show();
             }
         });
+
+        loadBingImg();
     }
 
     /**
