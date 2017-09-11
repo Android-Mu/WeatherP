@@ -1,15 +1,20 @@
 package com.codexiaosheng.weatherp;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.support.v4.view.GravityCompat;
+import android.support.v4.widget.DrawerLayout;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -21,6 +26,7 @@ import com.codexiaosheng.weatherp.bean.BingPicBean;
 import com.codexiaosheng.weatherp.bean.WeatherBean;
 import com.codexiaosheng.weatherp.constant.Constant;
 import com.codexiaosheng.weatherp.http.HttpModule;
+import com.codexiaosheng.weatherp.service.AutoUpdateService;
 import com.google.gson.Gson;
 import com.lzy.okgo.OkGo;
 import com.lzy.okgo.callback.StringCallback;
@@ -37,6 +43,9 @@ import java.util.List;
 
 public class WeatherActivity extends AppCompatActivity {
 
+    public DrawerLayout drawerLayout;
+    private Button btnCity;
+    public SwipeRefreshLayout refreshLayout;
     private ImageView ivBg;
     private ScrollView svWeatherLayout;
     private TextView tvCityName;
@@ -52,6 +61,8 @@ public class WeatherActivity extends AppCompatActivity {
 
     private List<WeatherBean.HeWeather5Bean> weatherList = new ArrayList<>();
     private WeatherBean.HeWeather5Bean weather5Bean;
+
+    public String cityNames; // 刷新时记录城市的名字
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -83,16 +94,26 @@ public class WeatherActivity extends AppCompatActivity {
             weatherList = weatherBean.getHeWeather5();
             if (weatherList.size() > 0) {
                 weather5Bean = weatherList.get(0);
+                cityNames = weather5Bean.getBasic().getCity();
                 showWeatherInfo(weather5Bean);
             }
         } else {
             // 无缓存时去服务器请求数据
             String cityName = getIntent().getStringExtra("city_name");
+            cityNames = cityName;
             cityName = cityName.replaceAll("\\s*", ""); // 去掉空格(空白)
             Log.e("WeatherActivity-城市名->", "onCreate: " + cityName);
             svWeatherLayout.setVisibility(View.INVISIBLE);
-            requestWeatherData(cityName);
+            requestWeatherData(cityNames);
         }
+
+        refreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+
+            @Override
+            public void onRefresh() {
+                requestWeatherData(cityNames);
+            }
+        });
     }
 
     /**
@@ -133,7 +154,11 @@ public class WeatherActivity extends AppCompatActivity {
     }
 
     private void initView() {
+        drawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
+        btnCity = (Button) findViewById(R.id.btn_nav);
         ivBg = (ImageView) findViewById(R.id.iv_bg);
+        refreshLayout = (SwipeRefreshLayout) findViewById(R.id.swipeRefresh);
+        refreshLayout.setColorSchemeResources(R.color.colorPrimary);
         svWeatherLayout = (ScrollView) findViewById(R.id.sv_weather_layout);
         tvCityName = (TextView) findViewById(R.id.tv_city_name);
         tvUpdateTime = (TextView) findViewById(R.id.tv_update_time);
@@ -145,6 +170,13 @@ public class WeatherActivity extends AppCompatActivity {
         tvComfortText = (TextView) findViewById(R.id.tv_comfort_text);
         tvCarWashText = (TextView) findViewById(R.id.tv_car_wash_text);
         tvSportText = (TextView) findViewById(R.id.tv_sport_text);
+        btnCity.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                drawerLayout.openDrawer(GravityCompat.START);
+            }
+        });
     }
 
     /**
@@ -152,7 +184,7 @@ public class WeatherActivity extends AppCompatActivity {
      *
      * @param cityName
      */
-    private void requestWeatherData(String cityName) {
+    public void requestWeatherData(String cityName) {
         OkGo.<String>post(HttpModule.BASE_WEATHER_URL + HttpModule.BASIC_WEATHER + cityName +
                 Constant.HEWEATHER_KEY)
                 .tag(this).execute(new StringCallback() {
@@ -176,6 +208,7 @@ public class WeatherActivity extends AppCompatActivity {
                             Toast.makeText(WeatherActivity.this, "获取天气信息失败",
                                     Toast.LENGTH_LONG).show();
                         }
+                        refreshLayout.setRefreshing(false);
                     }
                 }
             }
@@ -185,6 +218,7 @@ public class WeatherActivity extends AppCompatActivity {
                 Log.e("requestWeatherData", "onError: " + response.body());
                 Toast.makeText(WeatherActivity.this, "网络请求失败",
                         Toast.LENGTH_LONG).show();
+                refreshLayout.setRefreshing(false);
             }
         });
 
@@ -228,6 +262,10 @@ public class WeatherActivity extends AppCompatActivity {
         tvCarWashText.setText(carWash);
         tvSportText.setText(sport);
         svWeatherLayout.setVisibility(View.VISIBLE);
+
+        // 启动后台更新天气服务
+        Intent intent = new Intent(this, AutoUpdateService.class);
+        startService(intent);
     }
 
 }
